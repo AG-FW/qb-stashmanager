@@ -1,4 +1,7 @@
-local QBCore = exports['qb-core']:GetCoreObject()local ActiveStashes = {}
+-- client/main.lua - QBCore Stash Manager (FIXED)
+local QBCore = exports['qb-core']:GetCoreObject()
+
+local ActiveStashes = {}
 local SpawnedPeds = {}
 local SpawnedObjects = {}
 local StashBlips = {}
@@ -14,7 +17,7 @@ CreateThread(function()
 end)
 
 function LoadStashes()
-    Framework.TriggerCallback('qb-stashmanager:server:GetAccessibleStashes', function(stashes)
+    QBCore.Functions.TriggerCallback('qb-stashmanager:server:GetAccessibleStashes', function(stashes)
         ActiveStashes = stashes
         ClearStashPoints()
         CreateStashPoints()
@@ -86,12 +89,6 @@ function CreateStashPoints()
             CreateStashBlip(stash, vector)
         end
         
-        if Config.UseTarget then
-            CreateTargetInteraction(stash, vector)
-        else
-            CreateZoneInteraction(stash, vector)
-        end
-        
         ::continue::
     end
 end
@@ -109,7 +106,6 @@ function SpawnStashPed(stash, coords)
     end
     
     if not HasModelLoaded(pedModel) then
-        --print('^1[StashManager]^7 Failed to load ped: ' .. stash.ped_model)
         return
     end
     
@@ -118,14 +114,12 @@ function SpawnStashPed(stash, coords)
     if stash.ped_offset then
         if type(stash.ped_offset) == 'table' then
             offset = stash.ped_offset
-            --print('^2[StashManager]^7 Using ped offset (table): X=' .. offset.x .. ' Y=' .. offset.y .. ' Z=' .. offset.z)
         elseif type(stash.ped_offset) == 'string' then
             local success, result = pcall(function()
                 return json.decode(stash.ped_offset)
             end)
             if success and result then
                 offset = result
-                --print('^2[StashManager]^7 Decoded ped offset: X=' .. offset.x .. ' Y=' .. offset.y .. ' Z=' .. offset.z)
             end
         end
     end
@@ -137,32 +131,18 @@ function SpawnStashPed(stash, coords)
     )
     
     local ped = CreatePed(4, pedModel, finalCoords.x, finalCoords.y, finalCoords.z, stash.ped_heading or 0.0, false, true)
-
     FreezeEntityPosition(ped, true)
     SetEntityInvincible(ped, true)
     SetBlockingOfNonTemporaryEvents(ped, true)
     
     SpawnedPeds[stash.id] = ped
-    --print('^2[StashManager]^7 Spawned ped for: ' .. stash.name .. ' at heading: ' .. (stash.ped_heading or 0.0))
+    
+    -- Add target to ped
+    AddStashTarget(ped, stash)
 end
-
 
 function SpawnStashObject(stash, coords)
     if not stash.object_model then return end
-    
-    --print('^3[StashManager]^7 Attempting to spawn object: ' .. stash.object_model)
-    
-    -- Check if object_offset is already a table or needs decoding
-    local offsetType = type(stash.object_offset)
-    --print('^3[StashManager]^7 Object offset type: ' .. offsetType)
-    
-    if offsetType == 'table' then
-        --print('^3[StashManager]^7 Offset already decoded as table')
-    elseif offsetType == 'string' then
-        --print('^3[StashManager]^7 Offset is JSON string: ' .. stash.object_offset)
-    else
-        --print('^3[StashManager]^7 No offset found')
-    end
     
     local objectModel = GetHashKey(stash.object_model)
     RequestModel(objectModel)
@@ -174,7 +154,6 @@ function SpawnStashObject(stash, coords)
     end
     
     if not HasModelLoaded(objectModel) then
-        --print('^1[StashManager]^7 Failed to load object: ' .. stash.object_model)
         return
     end
     
@@ -182,23 +161,15 @@ function SpawnStashObject(stash, coords)
     
     if stash.object_offset then
         if type(stash.object_offset) == 'table' then
-            -- Already decoded
             offset = stash.object_offset
-            --print('^2[StashManager]^7 Using pre-decoded offset: X=' .. offset.x .. ' Y=' .. offset.y .. ' Z=' .. offset.z)
         elseif type(stash.object_offset) == 'string' then
-            -- Need to decode JSON
             local success, result = pcall(function()
                 return json.decode(stash.object_offset)
             end)
             if success and result then
                 offset = result
-                --print('^2[StashManager]^7 Decoded offset: X=' .. offset.x .. ' Y=' .. offset.y .. ' Z=' .. offset.z)
-            else
-                --print('^1[StashManager]^7 Failed to decode offset!')
             end
         end
-    else
-        --print('^1[StashManager]^7 No offset found in database for: ' .. stash.name)
     end
     
     local finalCoords = vector3(
@@ -207,19 +178,16 @@ function SpawnStashObject(stash, coords)
         coords.z + (offset.z or 0.0)
     )
     
-    --print('^2[StashManager]^7 Final spawn coords: X=' .. finalCoords.x .. ' Y=' .. finalCoords.y .. ' Z=' .. finalCoords.z)
-    --print('^2[StashManager]^7 Heading: ' .. (stash.object_heading or 0.0))
-    
     local object = CreateObject(objectModel, finalCoords.x, finalCoords.y, finalCoords.z, false, false, false)
     SetEntityHeading(object, stash.object_heading or 0.0)
     FreezeEntityPosition(object, true)
     SetEntityAsMissionEntity(object, true, true)
     
     SpawnedObjects[stash.id] = object
-    --print('^2[StashManager]^7 Spawned object for: ' .. stash.name .. ' (Entity ID: ' .. object .. ')')
+    
+    -- Add target to object
+    AddStashTarget(object, stash)
 end
-
-
 
 function CreateStashBlip(stash, coords)
     local blip = AddBlipForCoord(coords.x, coords.y, coords.z)
@@ -234,71 +202,20 @@ function CreateStashBlip(stash, coords)
     StashBlips[stash.id] = blip
 end
 
-function CreateTargetInteraction(stash, coords)
-    -- If there's a ped, add target to ped
-    if stash.ped_model and SpawnedPeds[stash.id] then
-        Target.AddEntity(SpawnedPeds[stash.id], {
-            {
-                name = 'stash_' .. stash.id,
-                icon = 'fas fa-box',
-                label = 'Open ' .. stash.name,
-                onSelect = function()
-                    TriggerServerEvent('qb-stashmanager:server:OpenStash', stash.id)
-                end
-            }
-        })
-        --print('^2[StashManager]^7 Added target to ped for: ' .. stash.name)
-    end
+function AddStashTarget(entity, stash)
+    if not DoesEntityExist(entity) then return end
     
-    -- If there's an object, add target to object
-    if stash.object_model and SpawnedObjects[stash.id] then
-        Target.AddEntity(SpawnedObjects[stash.id], {
-            {
-                name = 'stash_object_' .. stash.id,
-                icon = 'fas fa-box',
-                label = 'Open ' .. stash.name,
-                onSelect = function()
-                    TriggerServerEvent('qb-stashmanager:server:OpenStash', stash.id)
-                end
-            }
-        })
-        --print('^2[StashManager]^7 Added target to object for: ' .. stash.name)
-    end
-    
-    -- If no ped and no object, create a zone-based target
-    if not stash.ped_model and not stash.object_model then
-        local zone = lib.zones.box({
-            coords = coords,
-            size = vec3(1.5, 1.5, 2.0),
-            rotation = 0.0,
-            debug = false,
-            onEnter = function()
-                if Config.TargetResource == 'ox_target' then
-                    exports.ox_target:addBoxZone({
-                        coords = coords,
-                        size = vec3(1.5, 1.5, 2.0),
-                        rotation = 0.0,
-                        debug = false,
-                        options = {
-                            {
-                                name = 'stash_zone_' .. stash.id,
-                                icon = 'fas fa-box',
-                                label = 'Open ' .. stash.name,
-                                onSelect = function()
-                                    TriggerServerEvent('qb-stashmanager:server:OpenStash', stash.id)
-                                end
-                            }
-                        }
-                    })
-                end
+    exports[Config.TargetResource]:addLocalEntity(entity, {
+        {
+            name = 'open_stash_' .. stash.id,
+            label = 'Open ' .. stash.name,
+            icon = 'fas fa-box',
+            onSelect = function()
+                TriggerServerEvent('qb-stashmanager:server:OpenStash', stash.id)
             end
-        })
-        
-        table.insert(CreatedZones, zone)
-        --print('^2[StashManager]^7 Added zone target for: ' .. stash.name)
-    end
+        }
+    })
 end
-
 
 function CreateZoneInteraction(stash, coords)
     local zone = lib.zones.box({
@@ -337,30 +254,30 @@ RegisterNetEvent('qb-stashmanager:client:RefreshStashes', function()
 end)
 
 RegisterCommand('stashmanager', function()
-    Framework.TriggerCallback('qb-stashmanager:server:IsAdmin', function(isAdmin)
+    QBCore.Functions.TriggerCallback('qb-stashmanager:server:IsAdmin', function(isAdmin)
         if isAdmin then
             OpenStashManagerMenu()
         else
-            Framework.Notify('No permission', 'error')
+            QBCore.Functions.Notify('No permission', 'error')
         end
     end)
 end)
 
 RegisterCommand('createprivatestash', function(source, args)
     if not args[1] then
-        Framework.Notify('Usage: /createprivatestash [citizenid]', 'error')
+        QBCore.Functions.Notify('Usage: /createprivatestash [citizenid]', 'error')
         return
     end
     
-    Framework.TriggerCallback('qb-stashmanager:server:IsAdmin', function(isAdmin)
+    QBCore.Functions.TriggerCallback('qb-stashmanager:server:IsAdmin', function(isAdmin)
         if not isAdmin then
-            Framework.Notify('No permission', 'error')
+            QBCore.Functions.Notify('No permission', 'error')
             return
         end
         
         local citizenid = args[1]:upper()
         
-        Framework.TriggerCallback('qb-stashmanager:server:GetPlayerName', function(playerName)
+        QBCore.Functions.TriggerCallback('qb-stashmanager:server:GetPlayerName', function(playerName)
             if playerName then
                 local input = lib.inputDialog('Create Private Stash for ' .. playerName, {
                     {type = 'input', label = 'Stash Name', required = true, max = 50, default = playerName .. '\'s Stash'},
@@ -374,8 +291,15 @@ RegisterCommand('createprivatestash', function(source, args)
                     CreatePrivateStashWithCitizenId(input, citizenid, nil, nil)
                 end
             else
-                Framework.Notify('Citizen ID not found', 'error')
+                QBCore.Functions.Notify('Citizen ID not found', 'error')
             end
         end, citizenid)
     end)
+end)
+
+-- Cleanup on resource stop
+AddEventHandler('onResourceStop', function(resource)
+    if resource == GetCurrentResourceName() then
+        ClearStashPoints()
+    end
 end)

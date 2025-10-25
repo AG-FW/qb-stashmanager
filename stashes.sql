@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS `stashes` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `type` ENUM('private', 'public', 'job') NOT NULL DEFAULT 'public',
+  `owner` VARCHAR(50) DEFAULT NULL,
+  `job` VARCHAR(50) DEFAULT NULL,
+  `coords` TEXT NOT NULL,
+  `slots` INT(11) NOT NULL DEFAULT 50,
+  `weight` INT(11) NOT NULL DEFAULT 100000,
+  `ped_model` VARCHAR(50) DEFAULT NULL,
+  `ped_offset` TEXT DEFAULT NULL,
+  `ped_heading` FLOAT DEFAULT 0.0,
+  `object_model` VARCHAR(100) DEFAULT NULL,
+  `object_offset` TEXT DEFAULT NULL,
+  `object_heading` FLOAT DEFAULT 0.0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` VARCHAR(50) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `owner` (`owner`),
+  KEY `job` (`job`),
+  KEY `type` (`type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

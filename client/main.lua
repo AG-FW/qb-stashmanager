@@ -1,4 +1,4 @@
--- client/main.lua - QBCore Stash Manager (FIXED)
+-- client/main.lua - ----AG---QBCore Stash Manager (FIXED)
 local QBCore = exports['qb-core']:GetCoreObject()
 
 local ActiveStashes = {}
@@ -77,21 +77,44 @@ function CreateStashPoints()
         
         local vector = vector3(coords.x, coords.y, coords.z)
         
+        local hasPedOrObject = false
+        
         if stash.ped_model then
             SpawnStashPed(stash, vector)
+            hasPedOrObject = true
         end
         
         if stash.object_model then
             SpawnStashObject(stash, vector)
+            hasPedOrObject = true
         end
         
         if Config.ShowBlips then
             CreateStashBlip(stash, vector)
         end
+        ----if faill
+if not hasPedOrObject then
+    exports[Config.TargetResource]:addBoxZone({
+        coords = vector,
+        size = vec3(2.0, 2.0, 2.0),
+        rotation = 0.0,
+        options = {
+            {
+                name = 'open_stash_' .. stash.id,
+                icon = 'fas fa-box',
+                label = 'Open ' .. stash.name,
+                onSelect = function()
+                    TriggerServerEvent('qb-stashmanager:server:OpenStash', stash.id)
+                end
+            }
+        }
+    })
+end
         
         ::continue::
     end
 end
+
 
 function SpawnStashPed(stash, coords)
     if not stash.ped_model then return end
@@ -297,7 +320,7 @@ RegisterCommand('createprivatestash', function(source, args)
     end)
 end)
 
--- Cleanup on resource stop
+
 AddEventHandler('onResourceStop', function(resource)
     if resource == GetCurrentResourceName() then
         ClearStashPoints()

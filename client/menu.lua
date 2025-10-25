@@ -75,7 +75,7 @@ function OpenLivePedPositioning(stashData, stashType)
     end
     
     if not HasModelLoaded(pedModel) then
-        Framework.Notify('Failed to load ped model!', 'error')
+        QBCore.FunctionsNotify('Failed to load ped model!', 'error')
         SetModelAsNoLongerNeeded(pedModel)
         return
     end
@@ -89,7 +89,7 @@ function OpenLivePedPositioning(stashData, stashType)
     local heading = 0.0
     local baseCoords = playerCoords
     
-    Framework.Notify('Arrows=Move | Q/E/Scroll=Rotate | G=Snap | Enter=Save | Backspace=Cancel', 'primary', 10000)
+    QBCore.FunctionsNotify('Arrows=Move | Q/E/Scroll=Rotate | G=Snap | Enter=Save | Backspace=Cancel', 'primary', 10000)
     
     CreateThread(function()
         local adjusting = true
@@ -129,19 +129,19 @@ function OpenLivePedPositioning(stashData, stashType)
             if IsControlJustPressed(0, 241) then
                 heading = heading + (rotSpeed * 2)
                 if heading >= 360 then heading = heading - 360 end
-               -- Framework.Notify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
+               -- QBCore.FunctionsNotify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
             end
             if IsControlJustPressed(0, 242) then
                 heading = heading - (rotSpeed * 2)
                 if heading < 0 then heading = heading + 360 end
-              --  Framework.Notify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
+              --  QBCore.FunctionsNotify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
             end
             
             if IsControlJustPressed(0, 47) then
                 local success, groundZ = GetGroundZFor_3dCoord(finalX, finalY, finalZ + 5.0, false)
                 if success then
                     offset.z = (groundZ - baseCoords.z)
-                    Framework.Notify('Ped snapped to ground!', 'success', 2000)
+                    QBCore.FunctionsNotify('Ped snapped to ground!', 'success', 2000)
                 end
             end
             
@@ -164,7 +164,7 @@ function OpenLivePedPositioning(stashData, stashType)
                 heading = math.floor(heading * 10 + 0.5) / 10
                 
                 --print('^2[StashManager]^7 Ped offset saved: X=' .. offset.x .. ' Y=' .. offset.y .. ' Z=' .. offset.z .. ' H=' .. heading)
-                Framework.Notify('Ped position saved!', 'success')
+                QBCore.FunctionsNotify('Ped position saved!', 'success')
                 
                 stashData.ped_offset = offset
                 stashData.ped_heading = heading
@@ -180,7 +180,7 @@ function OpenLivePedPositioning(stashData, stashType)
                 adjusting = false
                 DeleteEntity(previewPed)
                 SetModelAsNoLongerNeeded(pedModel)
-                Framework.Notify('Cancelled', 'error')
+                QBCore.FunctionsNotify('Cancelled', 'error')
             end
         end
     end)
@@ -232,7 +232,7 @@ function OpenLiveObjectPositioning(stashData, stashType)
     end
     
     if not HasModelLoaded(objectModel) then
-        Framework.Notify('Failed to load object model!', 'error')
+        QBCore.FunctionsNotify('Failed to load object model!', 'error')
         SetModelAsNoLongerNeeded(objectModel)
         return
     end
@@ -245,7 +245,7 @@ function OpenLiveObjectPositioning(stashData, stashType)
     local heading = 0.0
     local baseCoords = playerCoords
     
-    Framework.Notify('Arrows=Move | Q/E/Scroll=Rotate | PgUp/Dn=Height | G=Snap | Enter=Save | Backspace=Cancel', 'primary', 10000)
+    QBCore.FunctionsNotify('Arrows=Move | Q/E/Scroll=Rotate | PgUp/Dn=Height | G=Snap | Enter=Save | Backspace=Cancel', 'primary', 10000)
     
     CreateThread(function()
         local adjusting = true
@@ -285,19 +285,19 @@ function OpenLiveObjectPositioning(stashData, stashType)
             if IsControlJustPressed(0, 241) then
                 heading = heading + (rotSpeed * 2)
                 if heading >= 360 then heading = heading - 360 end
-               -- Framework.Notify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
+               -- QBCore.FunctionsNotify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
             end
             if IsControlJustPressed(0, 242) then
                 heading = heading - (rotSpeed * 2)
                 if heading < 0 then heading = heading + 360 end
-               -- Framework.Notify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
+               -- QBCore.FunctionsNotify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
             end
             
             if IsControlJustPressed(0, 47) then
                 local success, groundZ = GetGroundZFor_3dCoord(finalX, finalY, finalZ + 5.0, false)
                 if success then
                     offset.z = (groundZ - baseCoords.z) + 0.5
-                    Framework.Notify('Snapped to ground! Z: ' .. string.format('%.2f', offset.z), 'success', 2000)
+                    QBCore.FunctionsNotify('Snapped to ground! Z: ' .. string.format('%.2f', offset.z), 'success', 2000)
                 end
             end
             
@@ -320,7 +320,7 @@ function OpenLiveObjectPositioning(stashData, stashType)
                 heading = math.floor(heading * 10 + 0.5) / 10
                 
                 --print('^2[StashManager]^7 Object offset saved: X=' .. offset.x .. ' Y=' .. offset.y .. ' Z=' .. offset.z .. ' H=' .. heading)
-                Framework.Notify('Position saved!', 'success')
+                QBCore.FunctionsNotify('Position saved!', 'success')
                 
                 ProceedWithStashCreation(stashData, stashType, offset, heading)
             end
@@ -329,7 +329,7 @@ function OpenLiveObjectPositioning(stashData, stashType)
                 adjusting = false
                 DeleteEntity(previewObject)
                 SetModelAsNoLongerNeeded(objectModel)
-                Framework.Notify('Cancelled', 'error')
+                QBCore.FunctionsNotify('Cancelled', 'error')
             end
         end
     end)
@@ -391,11 +391,11 @@ function OpenOnlinePlayerSelection(stashData, objectOffset, objectHeading)
     
     if not input then return end
     
-    Framework.TriggerCallback('qb-stashmanager:server:GetCitizenId', function(citizenid)
+    QBCore.Functions.TriggerCallback('qb-stashmanager:server:GetCitizenId', function(citizenid)
         if citizenid then
             CreatePrivateStashWithCitizenId(stashData, citizenid, objectOffset, objectHeading)
         else
-            Framework.Notify('Player not found', 'error')
+            QBCore.FunctionsNotify('Player not found', 'error')
         end
     end, tonumber(input[1]))
 end
@@ -409,7 +409,7 @@ function OpenCitizenIdInput(stashData, objectOffset, objectHeading)
     
     local citizenid = input[1]:upper()
     
-    Framework.TriggerCallback('qb-stashmanager:server:GetPlayerName', function(playerName)
+    QBCore.Functions.TriggerCallback('qb-stashmanager:server:GetPlayerName', function(playerName)
         if playerName then
             local confirm = lib.alertDialog({
                 header = 'Confirm Owner',
@@ -422,7 +422,7 @@ function OpenCitizenIdInput(stashData, objectOffset, objectHeading)
                 CreatePrivateStashWithCitizenId(stashData, citizenid, objectOffset, objectHeading)
             end
         else
-            Framework.Notify('Citizen ID not found', 'error')
+            QBCore.FunctionsNotify('Citizen ID not found', 'error')
         end
     end, citizenid)
 end
@@ -498,9 +498,9 @@ function CreateStashAtLocation(data, stashType, job, owner, objectOffset, object
 end
 
 function OpenManageStashesMenu()
-    Framework.TriggerCallback('qb-stashmanager:server:GetAllStashes', function(stashes)
+    QBCore.Functions.TriggerCallback('qb-stashmanager:server:GetAllStashes', function(stashes)
         if #stashes == 0 then
-            Framework.Notify('No stashes found', 'error')
+            QBCore.FunctionsNotify('No stashes found', 'error')
             return
         end
         
@@ -551,7 +551,7 @@ function OpenStashEditMenu(stash)
                 local success, coords = pcall(function() return json.decode(stash.coords) end)
                 if success and coords then
                     SetEntityCoords(PlayerPedId(), coords.x, coords.y, coords.z)
-                    Framework.Notify('Teleported', 'success')
+                    QBCore.FunctionsNotify('Teleported', 'success')
                 end
             end
         }
@@ -645,7 +645,7 @@ function OpenPedSettingsMenu(stash)
                     }
                     
                     TriggerServerEvent('qb-stashmanager:server:UpdateStash', stash.id, updatedData)
-                    Framework.Notify('Ped model updated!', 'success')
+                    QBCore.FunctionsNotify('Ped model updated!', 'success')
                 end
             end
         })
@@ -690,7 +690,7 @@ function OpenPedSettingsMenu(stash)
                     }
                     
                     TriggerServerEvent('qb-stashmanager:server:UpdateStash', stash.id, updatedData)
-                    Framework.Notify('Ped removed!', 'success')
+                    QBCore.FunctionsNotify('Ped removed!', 'success')
                 end
             end
         })
@@ -753,7 +753,7 @@ function OpenObjectSettingsMenu(stash)
                     }
                     
                     TriggerServerEvent('qb-stashmanager:server:UpdateStash', stash.id, updatedData)
-                    Framework.Notify('Object model updated!', 'success')
+                    QBCore.FunctionsNotify('Object model updated!', 'success')
                 end
             end
         })
@@ -798,7 +798,7 @@ function OpenObjectSettingsMenu(stash)
                     }
                     
                     TriggerServerEvent('qb-stashmanager:server:UpdateStash', stash.id, updatedData)
-                    Framework.Notify('Object removed!', 'success')
+                    QBCore.FunctionsNotify('Object removed!', 'success')
                 end
             end
         })
@@ -824,7 +824,7 @@ end
 function OpenRepositionPed(stash)
     local success, coords = pcall(function() return json.decode(stash.coords) end)
     if not success or not coords then
-        Framework.Notify('Failed to load stash coordinates', 'error')
+        QBCore.FunctionsNotify('Failed to load stash coordinates', 'error')
         return
     end
     
@@ -839,7 +839,7 @@ function OpenRepositionPed(stash)
     end
     
     if not HasModelLoaded(pedModel) then
-        Framework.Notify('Failed to load ped model!', 'error')
+        QBCore.FunctionsNotify('Failed to load ped model!', 'error')
         return
     end
     
@@ -864,7 +864,7 @@ function OpenRepositionPed(stash)
     local heading = stash.ped_heading or 0.0
     local baseCoords = stashCoords
     
-    Framework.Notify('Arrows=Move | Q/E/Scroll=Rotate | G=Snap | Enter=Save | Backspace=Cancel', 'primary', 10000)
+    QBCore.FunctionsNotify('Arrows=Move | Q/E/Scroll=Rotate | G=Snap | Enter=Save | Backspace=Cancel', 'primary', 10000)
     
     CreateThread(function()
         local adjusting = true
@@ -904,19 +904,19 @@ function OpenRepositionPed(stash)
             if IsControlJustPressed(0, 241) then
                 heading = heading + (rotSpeed * 2)
                 if heading >= 360 then heading = heading - 360 end
-               -- Framework.Notify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
+               -- QBCore.FunctionsNotify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
             end
             if IsControlJustPressed(0, 242) then
                 heading = heading - (rotSpeed * 2)
                 if heading < 0 then heading = heading + 360 end
-              --  Framework.Notify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
+              --  QBCore.FunctionsNotify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
             end
             
             if IsControlJustPressed(0, 47) then
                 local success, groundZ = GetGroundZFor_3dCoord(finalX, finalY, finalZ + 5.0, false)
                 if success then
                     offset.z = (groundZ - baseCoords.z)
-                    Framework.Notify('Ped snapped to ground!', 'success', 2000)
+                    QBCore.FunctionsNotify('Ped snapped to ground!', 'success', 2000)
                 end
             end
             
@@ -938,7 +938,7 @@ function OpenRepositionPed(stash)
                 offset.z = math.floor(offset.z * 100 + 0.5) / 100
                 heading = math.floor(heading * 10 + 0.5) / 10
                 
-                Framework.Notify('Ped repositioned!', 'success')
+                QBCore.FunctionsNotify('Ped repositioned!', 'success')
                 
                 local updatedData = {
                     name = stash.name,
@@ -963,7 +963,7 @@ function OpenRepositionPed(stash)
                 adjusting = false
                 DeleteEntity(previewPed)
                 SetModelAsNoLongerNeeded(pedModel)
-                Framework.Notify('Cancelled', 'error')
+                QBCore.FunctionsNotify('Cancelled', 'error')
             end
         end
     end)
@@ -972,7 +972,7 @@ end
 function OpenRepositionObject(stash)
     local success, coords = pcall(function() return json.decode(stash.coords) end)
     if not success or not coords then
-        Framework.Notify('Failed to load stash coordinates', 'error')
+        QBCore.FunctionsNotify('Failed to load stash coordinates', 'error')
         return
     end
     
@@ -987,7 +987,7 @@ function OpenRepositionObject(stash)
     end
     
     if not HasModelLoaded(objectModel) then
-        Framework.Notify('Failed to load object model!', 'error')
+        QBCore.FunctionsNotify('Failed to load object model!', 'error')
         return
     end
     
@@ -1011,7 +1011,7 @@ function OpenRepositionObject(stash)
     local heading = stash.object_heading or 0.0
     local baseCoords = stashCoords
     
-    Framework.Notify('Arrows=Move | Q/E/Scroll=Rotate | PgUp/Dn=Height | G=Snap | Enter=Save | Backspace=Cancel', 'primary', 20000)
+    QBCore.FunctionsNotify('Arrows=Move | Q/E/Scroll=Rotate | PgUp/Dn=Height | G=Snap | Enter=Save | Backspace=Cancel', 'primary', 20000)
     
     CreateThread(function()
         local adjusting = true
@@ -1051,19 +1051,19 @@ function OpenRepositionObject(stash)
             if IsControlJustPressed(0, 241) then
                 heading = heading + (rotSpeed * 2)
                 if heading >= 360 then heading = heading - 360 end
-               -- Framework.Notify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
+               -- QBCore.FunctionsNotify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
             end
             if IsControlJustPressed(0, 242) then
                 heading = heading - (rotSpeed * 2)
                 if heading < 0 then heading = heading + 360 end
-                --Framework.Notify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
+                --QBCore.FunctionsNotify('Heading: ' .. math.floor(heading) .. '°', 'primary', 500)
             end
             
             if IsControlJustPressed(0, 47) then
                 local success, groundZ = GetGroundZFor_3dCoord(finalX, finalY, finalZ + 5.0, false)
                 if success then
                     offset.z = (groundZ - baseCoords.z) + 0.5
-                    Framework.Notify('Object snapped to ground!', 'success', 2000)
+                    QBCore.FunctionsNotify('Object snapped to ground!', 'success', 2000)
                 end
             end
             
@@ -1085,7 +1085,7 @@ function OpenRepositionObject(stash)
                 offset.z = math.floor(offset.z * 100 + 0.5) / 100
                 heading = math.floor(heading * 10 + 0.5) / 10
                 
-                Framework.Notify('Object repositioned!', 'success')
+                QBCore.FunctionsNotify('Object repositioned!', 'success')
                 
                 local updatedData = {
                     name = stash.name,
@@ -1110,7 +1110,7 @@ function OpenRepositionObject(stash)
                 adjusting = false
                 DeleteEntity(previewObject)
                 SetModelAsNoLongerNeeded(objectModel)
-                Framework.Notify('Cancelled', 'error')
+                QBCore.FunctionsNotify('Cancelled', 'error')
             end
         end
     end)

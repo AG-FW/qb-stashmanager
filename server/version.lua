@@ -1,7 +1,7 @@
 -- server/version.lua
 -- GitHub Version Checker for AG-StashManager
 
-local CURRENT_VERSION = '1.0.2'
+local CURRENT_VERSION = '1.0.3'
 local RESOURCE_NAME = 'AG-StashManager'
 local GITHUB_REPO = 'AG-FW/qb-stashmanager'
 local CHECK_URL = 'https://api.github.com/repos/AG-FW/qb-stashmanager/releases/latest'
@@ -47,3 +47,4 @@ CreateThread(function()
         end
     end, 'GET')
 end)
+

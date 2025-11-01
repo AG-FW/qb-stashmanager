@@ -3,7 +3,7 @@ game 'gta5'
 
 author 'AG Framework'
 description 'QBCore Stash Manager with Ped & Object Positioning'
-version '1.0.3'
+version '1.0.4'
 
 shared_scripts {
     '@ox_lib/init.lua',
@@ -34,4 +34,5 @@ dependencies {
 
 
 lua54 'yes'
+
 

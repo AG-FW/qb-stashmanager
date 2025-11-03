@@ -11,11 +11,15 @@ Config.AdminGroup = 'admin' -- QBCore permission group
 Config.DefaultSlots = 50
 Config.DefaultWeight = 100000 -- 100kg in grams
 
+-- Notification system: 'qb' for QBCore.Notify, 'ox' for ox_lib notifications
+Config.Notification = 'qb'
+
 -- Stash types
 Config.StashTypes = {
     ['private'] = 'Private Stash',
     ['public'] = 'Public Stash',
-    ['job'] = 'Job Stash'
+    ['job'] = 'Job Stash',
+    ['shared'] = 'Shared Stash'
 }
 
 -- Available jobs for job stashes
@@ -39,10 +43,33 @@ Config.UseTarget = true -- Set to false to use zone-based interaction
 Config.TargetResource = 'ox_target' -- ox_target or qb-target
 
 -- Stash blip settings
-Config.ShowBlips = false
-Config.BlipSprite = 478
+Config.ShowBlips = false -- Global toggle (can be overridden per stash)
 Config.BlipScale = 0.7
-Config.BlipColor = 3
+Config.BlipShortRange = true -- Whether blips only show when nearby
+
+-- Blip settings per stash type
+Config.BlipSettings = {
+    ['private'] = {
+        sprite = 478, -- Box icon
+        color = 1, -- Red
+        label = 'Private Stash'
+    },
+    ['public'] = {
+        sprite = 478, -- Box icon
+        color = 2, -- Green
+        label = 'Public Stash'
+    },
+    ['job'] = {
+        sprite = 478, -- Box icon
+        color = 3, -- Blue
+        label = 'Job Stash'
+    },
+    ['shared'] = {
+        sprite = 478, -- Box icon
+        color = 5, -- Yellow
+        label = 'Shared Stash'
+    }
+}
 
 -- Interaction distance
 Config.InteractionDistance = 2.0

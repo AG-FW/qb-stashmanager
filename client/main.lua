@@ -6,6 +6,27 @@ local SpawnedPeds = {}
 local SpawnedObjects = {}
 local StashBlips = {}
 local CreatedZones = {}
+local BlipSettings = {} -- Store blip settings from server
+
+local function Notify(message, notifType, duration)
+    notifType = notifType or 'primary'
+    duration = duration or 5000
+
+    if Config.Notification == 'ox' and lib and lib.notify then
+        lib.notify({
+            title = 'Stash Manager',
+            description = message,
+            type = notifType,
+            duration = duration
+        })
+    else
+        QBCore.Functions.Notify(message, notifType, duration)
+    end
+end
+
+RegisterNetEvent('qb-stashmanager:client:Notify', function(message, notifType, duration)
+    Notify(message, notifType, duration)
+end)
 
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
     LoadStashes()
@@ -19,8 +40,15 @@ end)
 function LoadStashes()
     QBCore.Functions.TriggerCallback('qb-stashmanager:server:GetAccessibleStashes', function(stashes)
         ActiveStashes = stashes
+        LoadBlipSettings()
         ClearStashPoints()
         CreateStashPoints()
+    end)
+end
+
+function LoadBlipSettings()
+    QBCore.Functions.TriggerCallback('qb-stashmanager:server:GetBlipSettings', function(settings)
+        BlipSettings = settings
     end)
 end
 
@@ -55,6 +83,9 @@ function ClearStashPoints()
 end
 
 function CreateStashPoints()
+    local playerData = QBCore.Functions.GetPlayerData()
+    if not playerData then return end
+    
     for _, stash in pairs(ActiveStashes) do
         if not stash.coords then
             goto continue
@@ -75,6 +106,26 @@ function CreateStashPoints()
             goto continue
         end
         
+        -- Check if player has access to this stash (blips only show for accessible stashes)
+        local hasAccess = false
+        if stash.type == 'public' then
+            hasAccess = true
+        elseif stash.type == 'private' then
+            hasAccess = stash.owner == playerData.citizenid
+        elseif stash.type == 'job' then
+            hasAccess = playerData.job and playerData.job.name == stash.job
+        elseif stash.type == 'shared' then
+            -- Check if player is in access list
+            if stash.access then
+                hasAccess = stash.access[playerData.citizenid] ~= nil
+            end
+        end
+        
+        -- Only proceed if player has access
+        if not hasAccess then
+            goto continue
+        end
+        
         local vector = vector3(coords.x, coords.y, coords.z)
         
         local hasPedOrObject = false
@@ -89,7 +140,16 @@ function CreateStashPoints()
             hasPedOrObject = true
         end
         
-        if Config.ShowBlips then
+        -- Check if blip should be shown (per stash setting or global config)
+        -- Note: Only accessible stashes will have blips created
+        local showBlip = stash.show_blip
+        if showBlip == nil then
+            showBlip = Config.ShowBlips
+        else
+            showBlip = showBlip == 1 or showBlip == true
+        end
+        
+        if showBlip then
             CreateStashBlip(stash, vector)
         end
         ----if faill
@@ -213,11 +273,48 @@ function SpawnStashObject(stash, coords)
 end
 
 function CreateStashBlip(stash, coords)
+    -- Priority 1: Use custom blip settings if set for this specific stash
+    if stash.blip_sprite and stash.blip_color then
+        local blipLabel = stash.blip_label or stash.name
+        
+        local blip = AddBlipForCoord(coords.x, coords.y, coords.z)
+        SetBlipSprite(blip, stash.blip_sprite)
+        SetBlipScale(blip, Config.BlipScale)
+        SetBlipColour(blip, stash.blip_color)
+        SetBlipAsShortRange(blip, Config.BlipShortRange)
+        BeginTextCommandSetBlipName('STRING')
+        AddTextComponentString(blipLabel)
+        EndTextCommandSetBlipName(blip)
+        
+        StashBlips[stash.id] = blip
+        return
+    end
+    
+    -- Priority 2: Get blip settings for this stash type from database
+    local blipSettings = nil
+    if BlipSettings and BlipSettings[stash.type] then
+        blipSettings = BlipSettings[stash.type]
+    end
+    
+    -- Priority 3: Use Config settings
+    if not blipSettings then
+        blipSettings = Config.BlipSettings and Config.BlipSettings[stash.type]
+    end
+    
+    -- Priority 4: Ultimate fallback to default settings
+    if not blipSettings then
+        blipSettings = {
+            sprite = 478,
+            color = 3,
+            label = 'Stash'
+        }
+    end
+    
     local blip = AddBlipForCoord(coords.x, coords.y, coords.z)
-    SetBlipSprite(blip, Config.BlipSprite)
+    SetBlipSprite(blip, blipSettings.sprite)
     SetBlipScale(blip, Config.BlipScale)
-    SetBlipColour(blip, Config.BlipColor)
-    SetBlipAsShortRange(blip, true)
+    SetBlipColour(blip, blipSettings.color)
+    SetBlipAsShortRange(blip, Config.BlipShortRange)
     BeginTextCommandSetBlipName('STRING')
     AddTextComponentString(stash.name)
     EndTextCommandSetBlipName(blip)
@@ -276,25 +373,40 @@ RegisterNetEvent('qb-stashmanager:client:RefreshStashes', function()
     LoadStashes()
 end)
 
+RegisterNetEvent('qb-stashmanager:client:RefreshBlipSettings', function()
+    LoadBlipSettings()
+end)
+
 RegisterCommand('stashmanager', function()
     QBCore.Functions.TriggerCallback('qb-stashmanager:server:IsAdmin', function(isAdmin)
         if isAdmin then
             OpenStashManagerMenu()
         else
-            QBCore.Functions.Notify('No permission', 'error')
+            Notify('No permission', 'error')
         end
+    end)
+end)
+
+RegisterCommand('sharedstash', function()
+    QBCore.Functions.TriggerCallback('qb-stashmanager:server:GetManagedSharedStashes', function(stashes)
+        if not stashes or (type(stashes) == 'table' and next(stashes) == nil) then
+            Notify('No shared stashes found', 'error')
+            return
+        end
+
+        OpenSharedStashesMenu(stashes)
     end)
 end)
 
 RegisterCommand('createprivatestash', function(source, args)
     if not args[1] then
-        QBCore.Functions.Notify('Usage: /createprivatestash [citizenid]', 'error')
+        Notify('Usage: /createprivatestash [citizenid]', 'error')
         return
     end
     
     QBCore.Functions.TriggerCallback('qb-stashmanager:server:IsAdmin', function(isAdmin)
         if not isAdmin then
-            QBCore.Functions.Notify('No permission', 'error')
+            Notify('No permission', 'error')
             return
         end
         
@@ -306,15 +418,48 @@ RegisterCommand('createprivatestash', function(source, args)
                     {type = 'input', label = 'Stash Name', required = true, max = 50, default = playerName .. '\'s Stash'},
                     {type = 'number', label = 'Slots', default = Config.DefaultSlots, min = 1, max = 500},
                     {type = 'number', label = 'Weight (grams)', default = Config.DefaultWeight, min = 1000, max = 10000000},
+                    {type = 'checkbox', label = 'Show Blip on Map', description = 'Enable map blip for this stash', checked = Config.ShowBlips},
                     {type = 'input', label = 'Ped Model (optional)', required = false},
                     {type = 'input', label = 'Object Model (optional)', required = false}
                 })
                 
                 if input then
-                    CreatePrivateStashWithCitizenId(input, citizenid, nil, nil)
+                    -- input indices: [1]=name, [2]=slots, [3]=weight, [4]=show_blip, [5]=ped_model, [6]=object_model
+                    local showBlip = input[4] ~= nil and input[4] or Config.ShowBlips
+                    input.show_blip = showBlip
+                    
+                    -- If blip is enabled, show blip configuration
+                    if showBlip then
+                        QBCore.Functions.TriggerCallback('qb-stashmanager:server:GetBlipSetting', function(blipSetting)
+                            local defaultSprite = 478
+                            local defaultColor = 3
+                            local defaultLabel = input[1]
+                            
+                            if blipSetting then
+                                defaultSprite = blipSetting.sprite or 478
+                                defaultColor = blipSetting.color or 3
+                                defaultLabel = blipSetting.label or input[1]
+                            end
+                            
+                            local blipInput = lib.inputDialog('Configure Blip Settings', {
+                                {type = 'number', label = 'Blip Sprite ID', description = 'Enter blip sprite ID (e.g., 478 for box)', default = defaultSprite, required = true, min = 1, max = 826},
+                                {type = 'number', label = 'Blip Color ID', description = 'Enter blip color ID (0-85)', default = defaultColor, required = true, min = 0, max = 85},
+                                {type = 'input', label = 'Blip Label', description = 'Text displayed on blip (optional, uses stash name if empty)', default = defaultLabel, required = false, max = 100}
+                            })
+                            
+                            if blipInput then
+                                input.blip_sprite = blipInput[1]
+                                input.blip_color = blipInput[2]
+                                input.blip_label = blipInput[3] ~= '' and blipInput[3] or nil
+                                CreatePrivateStashWithCitizenId(input, citizenid, nil, nil)
+                            end
+                        end, 'private')
+                    else
+                        CreatePrivateStashWithCitizenId(input, citizenid, nil, nil)
+                    end
                 end
             else
-                QBCore.Functions.Notify('Citizen ID not found', 'error')
+                Notify('Citizen ID not found', 'error')
             end
         end, citizenid)
     end)

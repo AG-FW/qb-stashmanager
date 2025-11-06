@@ -95,8 +95,7 @@
    ```cfg
    ensure qb-stashmanager
    ```
-5. 
-dependencies {
+5. dependencies {
     'qb-core',
     'oxmysql',
     -- ONE of the following:
